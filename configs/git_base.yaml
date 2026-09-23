@@ -1,0 +1,15 @@
+run_name: git_base_ft_v1              # change for every new experiment
+model_name: microsoft/git-base
+hf_repo: jatinnabhoya/msvd-captioning
+data_root: /kaggle/input/msvd-frames/msvd   # verify with the find command in Step 5
+num_frames: 6                         # GIT's video setup: frames + temporal embedding
+epochs: 15
+batch_size: 8                         # if CUDA out-of-memory: 4 and grad_accum 4
+grad_accum: 2
+lr: 5.0e-5
+weight_decay: 0.01
+warmup_ratio: 0.1
+repeats: 5                            # random captions sampled per video per epoch
+max_len: 40
+num_beams: 3
+seed: 42
