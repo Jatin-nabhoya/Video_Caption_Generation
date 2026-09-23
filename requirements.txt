@@ -1,0 +1,5 @@
+transformers>=4.40
+huggingface_hub
+pycocoevalcap
+pyyaml
+tqdm
