@@ -31,7 +31,7 @@ collate = make_collate(processor.tokenizer, cfg["max_len"])
 train_ds = MSVDFrames(cfg["data_root"], "train", processor, cfg["num_frames"], True, cfg["repeats"])
 val_ds = MSVDFrames(cfg["data_root"], "val", processor, cfg["num_frames"], train=False)
 train_dl = DataLoader(train_ds, cfg["batch_size"], shuffle=True, num_workers=4, collate_fn=collate, drop_last=True)
-val_dl = DataLoader(val_ds, cfg["batch_size"], num_workers=4, collate_fn=collate)
+val_dl = DataLoader(val_ds, cfg.get("eval_batch_size", 16), num_workers=4, collate_fn=collate)
 
 opt = torch.optim.AdamW(model.parameters(), lr=cfg["lr"], weight_decay=cfg["weight_decay"])
 steps_per_epoch = len(train_dl) // cfg["grad_accum"]
