@@ -1,5 +1,6 @@
 import argparse, os, random, sys, time
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+os.environ.setdefault("PYTORCH_ALLOC_CONF", "expandable_segments:True")  # less memory fragmentation
 import torch, yaml
 from torch.utils.data import DataLoader
 from tqdm import tqdm
@@ -21,6 +22,9 @@ ckpt_path, state = try_resume(cfg["hf_repo"], f"{run}/last")
 processor, model = load_git(ckpt_path or cfg["model_name"], cfg["num_frames"])
 state = state or {"epoch": 0, "best_cider": -1.0, "history": []}
 model.to(dev)
+if cfg.get("grad_checkpointing", False):
+    model.gradient_checkpointing_enable()   # ~40% less GPU memory, ~25% slower
+    print("gradient checkpointing: ON")
 print(f"run={run} starting at epoch {state['epoch']}")
 
 collate = make_collate(processor.tokenizer, cfg["max_len"])
