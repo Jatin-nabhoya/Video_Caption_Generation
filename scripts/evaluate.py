@@ -13,6 +13,7 @@ p.add_argument("--config", required=True)
 p.add_argument("--checkpoint", default="best", choices=["zeroshot", "best", "last"])
 p.add_argument("--split", default="test")
 p.add_argument("--out", required=True)
+p.add_argument("--limit", type=int, default=0)
 args = p.parse_args()
 cfg = yaml.safe_load(open(args.config))
 if args.checkpoint == "zeroshot":
@@ -23,6 +24,8 @@ else:
 processor, model = load_git(path, cfg["num_frames"])
 model.to("cuda")
 ds = MSVDFrames(cfg["data_root"], args.split, processor, cfg["num_frames"], train=False)
+if args.limit:
+    ds.ids = ds.ids[:args.limit]
 dl = DataLoader(ds, cfg.get("eval_batch_size", 16), num_workers=4, collate_fn=make_collate(processor.tokenizer))
 preds = generate_captions(model, processor, dl, "cuda", num_beams=cfg["num_beams"])
 scores = score_captions(preds, ds.caps)
