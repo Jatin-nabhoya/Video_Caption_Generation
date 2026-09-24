@@ -17,6 +17,6 @@ def load_git(name_or_path="microsoft/git-base", num_frames=6):
         with torch.no_grad():
             for p in model.git.img_temporal_embedding:
                 p.zero_()
-    emb_max = max(float(p.abs().max()) for p in model.git.img_temporal_embedding)
+    emb_max = max(float(p.detach().abs().max()) for p in model.git.img_temporal_embedding)
     print(f"temporal embeddings max |value| = {emb_max:.4f}")  # must be a small number, never 1e+20
     return processor, model
