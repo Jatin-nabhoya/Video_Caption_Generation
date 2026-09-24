@@ -4,8 +4,9 @@ hf_repo: jatinnabhoya/Video_Caption_Generation
 data_root: /kaggle/input/datasets/jatinnabhoya/video-caption-generation/msvd   # verify with the find command in Step 5
 num_frames: 6                         # GIT's video setup: frames + temporal embedding
 epochs: 15
-batch_size: 8                         # if CUDA out-of-memory: 4 and grad_accum 4
-grad_accum: 2
+batch_size: 4                         # if CUDA out-of-memory: 4 and grad_accum 4
+grad_accum: 4
+grad_checkpointing: true
 lr: 5.0e-5
 weight_decay: 0.01
 warmup_ratio: 0.1
