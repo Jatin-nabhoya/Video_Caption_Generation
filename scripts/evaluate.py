@@ -23,7 +23,7 @@ else:
 processor, model = load_git(path, cfg["num_frames"])
 model.to("cuda")
 ds = MSVDFrames(cfg["data_root"], args.split, processor, cfg["num_frames"], train=False)
-dl = DataLoader(ds, cfg["batch_size"], num_workers=4, collate_fn=make_collate(processor.tokenizer))
+dl = DataLoader(ds, cfg.get("eval_batch_size", 16), num_workers=4, collate_fn=make_collate(processor.tokenizer))
 preds = generate_captions(model, processor, dl, "cuda", num_beams=cfg["num_beams"])
 scores = score_captions(preds, ds.caps)
 os.makedirs(os.path.dirname(args.out) or ".", exist_ok=True)
