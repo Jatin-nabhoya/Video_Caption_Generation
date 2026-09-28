@@ -1,0 +1,16 @@
+# CLIP4Clip meanP on MSVD - follows the official recipe (ViT-B/32, 12 frames, 32 words, 5 epochs)
+run_name: clip4clip_meanP_v1
+model_name: openai/clip-vit-base-patch32
+hf_repo: jatinnabhoya/Video_Caption_Generation
+data_root: /kaggle/input/datasets/jatinnabhoya/video-caption-generation/msvd
+num_frames: 12
+max_words: 32
+epochs: 5
+batch_size: 32              # official: 128 on 4 GPUs; 32 fits one T4
+eval_batch_size: 16
+repeats: 5                  # random captions sampled per video per epoch
+lr: 1.0e-6                  # official: 1e-7 at batch 128; raised for the smaller batch / fewer steps
+weight_decay: 0.2
+warmup_ratio: 0.1
+grad_checkpointing: true
+seed: 42
