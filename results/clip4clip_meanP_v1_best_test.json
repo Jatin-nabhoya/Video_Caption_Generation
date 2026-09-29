@@ -1,0 +1,37 @@
+{
+  "model": "CLIP4Clip (meanP, retrieval captioning)",
+  "run": "clip4clip_meanP_v1",
+  "checkpoint": "best",
+  "split": "test",
+  "n_videos": 670,
+  "scores": {
+    "BLEU-4": 22.85,
+    "METEOR": 26.96,
+    "ROUGE-L": 54.15,
+    "CIDEr": 45.89
+  },
+  "retrieval": {
+    "R@1": 45.79,
+    "R@5": 75.04,
+    "R@10": 84.03,
+    "MdR": 2.0,
+    "MnR": 10.6
+  },
+  "config": {
+    "run_name": "clip4clip_meanP_v1",
+    "model_name": "openai/clip-vit-base-patch32",
+    "hf_repo": "jatinnabhoya/Video_Caption_Generation",
+    "data_root": "/kaggle/input/datasets/jatinnabhoya/video-caption-generation/msvd",
+    "num_frames": 12,
+    "max_words": 32,
+    "epochs": 5,
+    "batch_size": 32,
+    "eval_batch_size": 16,
+    "repeats": 5,
+    "lr": 1e-06,
+    "weight_decay": 0.2,
+    "warmup_ratio": 0.1,
+    "grad_checkpointing": true,
+    "seed": 42
+  }
+}
