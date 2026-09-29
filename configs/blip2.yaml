@@ -1,0 +1,17 @@
+# BLIP-2 (OPT-2.7B) on MSVD: ViT-g + OPT frozen (fp16), Q-Former + projection + frame embedding trained
+run_name: blip2_v1
+model_name: Salesforce/blip2-opt-2.7b
+hf_repo: jatinnabhoya/Video_Caption_Generation
+data_root: /kaggle/input/datasets/jatinnabhoya/video-caption-generation/msvd
+num_frames: 6               # same as GIT: 6 frames x 32 queries = 192 soft tokens
+epochs: 3
+batch_size: 4
+grad_accum: 4               # effective batch 16 (BLIP-2 caption fine-tuning default)
+eval_batch_size: 4
+repeats: 5
+max_len: 40
+lr: 2.0e-5
+weight_decay: 0.05
+warmup_ratio: 0.1
+num_beams: 3
+seed: 42
