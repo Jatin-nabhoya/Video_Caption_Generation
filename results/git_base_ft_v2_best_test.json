@@ -1,14 +1,14 @@
 {
   "model": "GIT-base",
   "run": "git_base_ft_v2",
-  "checkpoint": "zeroshot",
+  "checkpoint": "best",
   "split": "test",
-  "n_videos": 32,
+  "n_videos": 670,
   "scores": {
-    "BLEU-4": 20.47,
-    "METEOR": 22.73,
-    "ROUGE-L": 46.34,
-    "CIDEr": 37.45
+    "BLEU-4": 54.25,
+    "METEOR": 38.0,
+    "ROUGE-L": 75.1,
+    "CIDEr": 101.27
   },
   "config": {
     "run_name": "git_base_ft_v2",
