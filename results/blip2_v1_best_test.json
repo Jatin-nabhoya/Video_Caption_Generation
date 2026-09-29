@@ -1,0 +1,31 @@
+{
+  "model": "BLIP-2 (OPT-2.7B, Q-Former fine-tuned)",
+  "run": "blip2_v1",
+  "checkpoint": "best",
+  "split": "test",
+  "n_videos": 670,
+  "scores": {
+    "BLEU-4": 75.47,
+    "METEOR": 49.88,
+    "ROUGE-L": 86.99,
+    "CIDEr": 178.34
+  },
+  "config": {
+    "run_name": "blip2_v1",
+    "model_name": "Salesforce/blip2-opt-2.7b",
+    "hf_repo": "jatinnabhoya/Video_Caption_Generation",
+    "data_root": "/kaggle/input/datasets/jatinnabhoya/video-caption-generation/msvd",
+    "num_frames": 6,
+    "epochs": 3,
+    "batch_size": 4,
+    "grad_accum": 4,
+    "eval_batch_size": 4,
+    "repeats": 5,
+    "max_len": 40,
+    "lr": 2e-05,
+    "weight_decay": 0.05,
+    "warmup_ratio": 0.1,
+    "num_beams": 3,
+    "seed": 42
+  }
+}
