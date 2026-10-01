@@ -1,0 +1,74 @@
+{
+  "video": "o_mWZWcm2r4_10_15",
+  "references": [
+    "two people are climbing up a wall using protective gear",
+    "a man and boy are rock climbing",
+    "a boy is rock climbing",
+    "a boy is climbing a climbing wall",
+    "a boy is climbing on a wall",
+    "a couple of boys are climbing an indoor rock climbing wall",
+    "a boy is climbing a wall",
+    "two boys a scaling a rock wall",
+    "a boy is climbing",
+    "a girl is climbing a wall",
+    "two people are climbing a rock wall",
+    "the boy and his dad climbed a rock wall",
+    "the girl climbed the rock wall",
+    "a boy and a man are climbing on a climbing wall",
+    "a person completes an indoor rock climbing challenge",
+    "the boy climed the rock wall",
+    "the people are playing",
+    "two men are climbing",
+    "a woman is climbing a wall",
+    "a persan climbing on the wall",
+    "a man and a girl are climbing on the wall",
+    "a boy is rock climbing",
+    "two people are climbing a rock wall",
+    "kids are climbing up a fake rock wall",
+    "the boy climbed up the rock wall",
+    "the girl is climing the rock wall",
+    "a boy is climbing"
+  ],
+  "results": {
+    "CLIP4Clip": {
+      "zero-shot": "a person is climbing the side of a rock wall",
+      "zero-shot top-3": [
+        [
+          "a person is climbing the side of a rock wall",
+          0.334
+        ],
+        [
+          "someone is climbing a rock wall",
+          0.331
+        ],
+        [
+          "a man is climbing a wall",
+          0.325
+        ]
+      ],
+      "fine-tuned": "someone is climbing a rock wall",
+      "fine-tuned top-3": [
+        [
+          "someone is climbing a rock wall",
+          0.319
+        ],
+        [
+          "a man is rock climbing",
+          0.311
+        ],
+        [
+          "a man is climbing with thick tag",
+          0.31
+        ]
+      ]
+    },
+    "GIT": {
+      "zero-shot": "the rock climbing wall at the top of the climbing wall at the top of the climbing wall in",
+      "fine-tuned": "a man is climbing a wall"
+    },
+    "BLIP-2": {
+      "zero-shot": "a man is climbing on a climbing wall in an indoor climbing gym",
+      "fine-tuned": "a boy is climbing a rock wall"
+    }
+  }
+}
