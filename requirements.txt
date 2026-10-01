@@ -3,3 +3,6 @@ huggingface_hub
 pycocoevalcap
 pyyaml
 tqdm
+peft>=0.13
+bitsandbytes>=0.45
+accelerate

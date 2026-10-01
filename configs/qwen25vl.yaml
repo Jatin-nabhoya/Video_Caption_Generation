@@ -1,0 +1,21 @@
+# Qwen2.5-VL-3B-Instruct on MSVD: QLoRA (4-bit LLM, fp16 vision), LoRA on LLM attention + MLP
+run_name: qwen25vl_3b_lora_v1
+model_name: Qwen/Qwen2.5-VL-3B-Instruct
+hf_repo: jatinnabhoya/Video_Caption_Generation
+data_root: /kaggle/input/datasets/jatinnabhoya/video-caption-generation/msvd
+num_frames: 8               # must be even (Qwen groups 2 frames per temporal patch) -> 4 x 144 = 576 visual tokens
+frame_size: 336             # 336 = 12 x 28 -> 144 tokens per frame pair after the 2x2 merge
+fps: 1.0                    # tells MRoPE how far apart the frames are in time (~8 frames over a ~10 s clip)
+prompt: "Describe this video in one short sentence."
+epochs: 2
+batch_size: 2
+grad_accum: 8               # effective batch 16 (same as BLIP-2 / GIT)
+eval_batch_size: 4
+repeats: 2                  # random captions per video per epoch (1200 videos x 2 = 2400 samples/epoch)
+lr: 1.0e-4                  # typical LoRA learning rate
+weight_decay: 0.0
+warmup_ratio: 0.05
+lora: {r: 16, alpha: 32, dropout: 0.05}
+max_new_tokens: 24
+num_beams: 3                # test-set decoding (validation during training uses greedy)
+seed: 42

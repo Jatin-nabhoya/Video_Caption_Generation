@@ -16,8 +16,10 @@ FILES = {  # (model, setting) -> test-set result file. Missing files are skipped
     ("GIT", "Fine-tuned"):       "results/git_base_ft_v2_best_test.json",
     ("BLIP-2", "Zero-shot"):     "results/blip2_zeroshot_test.json",
     ("BLIP-2", "Fine-tuned"):    "results/blip2_v1_best_test.json",
+    ("Qwen2.5-VL", "Zero-shot"):  "results/qwen25vl_zeroshot_test.json",
+    ("Qwen2.5-VL", "Fine-tuned"): "results/qwen25vl_3b_lora_v1_best_test.json",
 }
-RUNS = {"CLIP4Clip": "clip4clip_meanP_v1", "GIT": "git_base_ft_v2", "BLIP-2": "blip2_v1"}  # training histories on HF
+RUNS = {"CLIP4Clip": "clip4clip_meanP_v1", "GIT": "git_base_ft_v2", "BLIP-2": "blip2_v1", "Qwen2.5-VL": "qwen25vl_3b_lora_v1"}  # training histories on HF
 HF_REPO = "jatinnabhoya/Video_Caption_Generation"
 
 # Published MSVD test numbers (scores x100)
@@ -32,7 +34,7 @@ CAP_METRICS = ["BLEU-4", "METEOR", "ROUGE-L", "CIDEr"]
 RET_METRICS = ["R@1", "R@5", "R@10"]
 
 # ---------------------------------------------------------------- style (validated categorical slots 1-3)
-MODEL_COLOR = {"CLIP4Clip": "#2a78d6", "GIT": "#eb6834", "BLIP-2": "#1baf7a"}
+MODEL_COLOR = {"CLIP4Clip": "#2a78d6", "GIT": "#eb6834", "BLIP-2": "#1baf7a", "Qwen2.5-VL": "#7c5cd6"}
 REF_COLORS = ["#8a8984", "#52514e"]           # neutral grays for published reference numbers
 SURFACE, TEXT, TEXT2, GRID = "#fcfcfb", "#0b0b0b", "#52514e", "#e4e3de"
 plt.rcParams.update({
