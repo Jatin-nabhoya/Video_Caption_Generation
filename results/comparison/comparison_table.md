@@ -6,6 +6,7 @@
 | GIT                                          | Fine-tuned (ours) |    54.25 |    38.00 |     75.10 |  101.27 | nan    | nan    | nan    | nan    |
 | BLIP-2                                       | Zero-shot (ours)  |    29.12 |    32.96 |     58.22 |   49.07 | nan    | nan    | nan    | nan    |
 | BLIP-2                                       | Fine-tuned (ours) |    75.47 |    49.88 |     86.99 |  178.34 | nan    | nan    | nan    | nan    |
+| Qwen2.5-VL                                   | Fine-tuned (ours) |    67.98 |    44.65 |     82.13 |  146.95 | nan    | nan    | nan    | nan    |
 | GIT paper (full-size GIT)                    | published         |    79.50 |   nan    |    nan    |  180.20 | nan    | nan    | nan    | nan    |
 | SwinBERT (prior SOTA, as cited in GIT paper) | published         |    58.20 |   nan    |    nan    |  120.60 | nan    | nan    | nan    | nan    |
 | CLIP4Clip paper (meanP)                      | published         |   nan    |   nan    |    nan    |  nan    |  46.20 |  76.10 |  84.60 |   2.00 |

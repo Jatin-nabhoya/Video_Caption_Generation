@@ -5,6 +5,7 @@ GIT,Zero-shot (ours),18.71,23.2,47.73,39.85,,,,
 GIT,Fine-tuned (ours),54.25,38.0,75.1,101.27,,,,
 BLIP-2,Zero-shot (ours),29.12,32.96,58.22,49.07,,,,
 BLIP-2,Fine-tuned (ours),75.47,49.88,86.99,178.34,,,,
+Qwen2.5-VL,Fine-tuned (ours),67.98,44.65,82.13,146.95,,,,
 GIT paper (full-size GIT),published,79.5,,,180.2,,,,
 "SwinBERT (prior SOTA, as cited in GIT paper)",published,58.2,,,120.6,,,,
 CLIP4Clip paper (meanP),published,,,,,46.2,76.1,84.6,2.0
