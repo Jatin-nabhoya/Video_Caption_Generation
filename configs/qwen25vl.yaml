@@ -7,7 +7,7 @@ num_frames: 8               # must be even (Qwen groups 2 frames per temporal pa
 frame_size: 336             # 336 = 12 x 28 -> 144 tokens per frame pair after the 2x2 merge
 fps: 1.0                    # tells MRoPE how far apart the frames are in time (~8 frames over a ~10 s clip)
 prompt: "Describe this video in one short sentence."
-epochs: 2
+epochs: 5
 batch_size: 2
 grad_accum: 8               # effective batch 16 (same as BLIP-2 / GIT)
 eval_batch_size: 4
