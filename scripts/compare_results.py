@@ -1,6 +1,6 @@
 """Build all comparison tables + figures from results/*.json and the training histories on HF Hub.
 Output: results/comparison/ (PNG figures, CSV/Markdown tables, qualitative examples).
-Add BLIP-2 later by filling its entries in FILES / RUNS - everything else updates automatically."""
+To add a model: fill its entries in FILES / RUNS / MODEL_COLOR - everything else updates automatically."""
 import argparse, json, os
 import matplotlib
 matplotlib.use("Agg")
@@ -33,8 +33,8 @@ PAPER_RETRIEVAL = {  # source: CLIP4Clip (Luo et al. 2021), MSVD text-to-video, 
 CAP_METRICS = ["BLEU-4", "METEOR", "ROUGE-L", "CIDEr"]
 RET_METRICS = ["R@1", "R@5", "R@10"]
 
-# ---------------------------------------------------------------- style (validated categorical slots 1-3)
-MODEL_COLOR = {"CLIP4Clip": "#2a78d6", "GIT": "#eb6834", "BLIP-2": "#1baf7a", "Qwen2.5-VL": "#7c5cd6"}
+# ---------------------------------------------------------------- style (validated categorical slots 1-4)
+MODEL_COLOR = {"CLIP4Clip": "#2a78d6", "GIT": "#eb6834", "BLIP-2": "#1baf7a", "Qwen2.5-VL": "#eda100"}
 REF_COLORS = ["#8a8984", "#52514e"]           # neutral grays for published reference numbers
 SURFACE, TEXT, TEXT2, GRID = "#fcfcfb", "#0b0b0b", "#52514e", "#e4e3de"
 plt.rcParams.update({
@@ -135,14 +135,14 @@ def main():
 
     # ---------------- figure 2: all models, zero-shot vs fine-tuned, one panel per metric
     if models:
-        fig, axes = plt.subplots(1, 4, figsize=(13, 3.8))
+        fig, axes = plt.subplots(1, 4, figsize=(3.6 * len(models) + 2, 4.2))
         x = np.arange(len(models)); w = 0.38
         for ax, met in zip(axes, CAP_METRICS):
             for j, m in enumerate(models):
                 zs, ft = res.get((m, "Zero-shot")), res.get((m, "Fine-tuned"))
                 bar(ax, [x[j] - w / 2], [zs[met] if zs else np.nan], w, MODEL_COLOR[m], "//")
                 bar(ax, [x[j] + w / 2], [ft[met] if ft else np.nan], w, MODEL_COLOR[m])
-            ax.set_xticks(x, models); ax.set_title(met)
+            ax.set_xticks(x, models, rotation=20, ha="right"); ax.set_title(met)
         axes[0].set_ylabel("score (x100)")
         from matplotlib.patches import Patch
         fig.legend(handles=[Patch(facecolor=SURFACE, edgecolor=TEXT2, hatch="//", label="Zero-shot"),
