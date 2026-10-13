@@ -234,8 +234,9 @@ def frame_stats(data_root, vid, n=6):
 # Error taxonomy: why did a caption fail?
 # ----------------------------------------------------------------------------
 ERROR_ORDER = ["Object / subject error", "Gender / age confusion", "Action error", "Hallucinated details",
-               "Verbose / style mismatch", "Too generic", "Counting error", "Wording only (meaning OK)"]
-ERROR_COLORS = ["#E45756", "#FF9DA6", "#F58518", "#B279A2", "#72B7B2", "#9D755D", "#EECA3B", "#BAB0AC"]
+               "Verbose / style mismatch", "Too generic", "Counting error", "Missed main event",
+               "Wording only (meaning OK)"]
+ERROR_COLORS = ["#E45756", "#FF9DA6", "#F58518", "#B279A2", "#72B7B2", "#9D755D", "#EECA3B", "#4C78A8", "#BAB0AC"]
 
 def subjects(text):
     ws = words(text)
@@ -282,7 +283,9 @@ def diagnose(pred, caps):
     if pv and not (syn_expand(pv) & rv):
         flags.append("Action error")
     unsupported = [w for w in content(pred) if w not in ref_words and norm(w) not in ref_words]
-    if len(unsupported) >= 2:
+    # short captions: one invented object ("a man is playing a flute") is already a hallucination
+    if len(unsupported) >= 2 or (unsupported and len(content(pred)) <= 3 and
+                                 any(w not in PERSON and not w.endswith("ing") for w in unsupported)):
         flags.append("Hallucinated details")
     ref_len = np.median([len(words(c)) for c in caps])
     if len(words(pred)) > max(1.8 * ref_len, 14):
@@ -295,11 +298,12 @@ def diagnose(pred, caps):
         flags.append("Counting error")
     return flags, unsupported
 
-def primary_error(flags):
+def primary_error(flags, cider=100.0):
     for e in ERROR_ORDER:
         if e in flags:
             return e
-    return "Wording only (meaning OK)"
+    # no rule fired: near-zero CIDEr means the caption is plausible but describes the wrong event
+    return "Wording only (meaning OK)" if cider >= 20 else "Missed main event"
 
 # ----------------------------------------------------------------------------
 # Plot helpers
@@ -332,8 +336,9 @@ def example_grid(rows, models, data_root, title, path, wrap=26):
         return
     ncol = 2 + len(models)
     fig = plt.figure(figsize=(3.3 * ncol, 2.15 * len(rows) + 0.8))
-    gs = fig.add_gridspec(len(rows) + 1, ncol, height_ratios=[0.25] + [1] * len(rows),
-                          width_ratios=[1.6, 1.25] + [1] * len(models), hspace=0.25, wspace=0.08)
+    gs = fig.add_gridspec(len(rows) + 1, ncol, height_ratios=[0.18] + [1] * len(rows),
+                          width_ratios=[1.6, 1.25] + [1] * len(models), hspace=0.25, wspace=0.08,
+                          top=1 - 0.55 / fig.get_figheight(), bottom=0.01, left=0.01, right=0.99)
     heads = ["Clip (3 frames)", "Ground truth (2 of the refs)"] + [f"{m}" for m in models]
     for j, h in enumerate(heads):
         ax = fig.add_subplot(gs[0, j]); ax.axis("off")
@@ -356,7 +361,7 @@ def example_grid(rows, models, data_root, title, path, wrap=26):
             ax.text(0, 0.95, textwrap.fill(text, wrap), va="top", fontsize=8.5)
             note = f"CIDEr {c:.0f}" + (f"\n{err}" if err else "")
             ax.text(0, 0.02, note, va="bottom", fontsize=7.5, color=cider_color(c), weight="bold")
-    fig.suptitle(title, fontsize=13, weight="bold", y=0.995)
+    fig.suptitle(title, fontsize=13, weight="bold", y=1 - 0.25 / fig.get_figheight())
     save(fig, path)
 
 # ----------------------------------------------------------------------------
@@ -378,6 +383,7 @@ def main():
     ap.add_argument("--no_meteor", action="store_true")
     ap.add_argument("--no_frames", action="store_true", help="skip brightness/motion and thumbnails")
     ap.add_argument("--seed", type=int, default=42)
+    ap.add_argument("--min_class", type=int, default=10, help="smallest class shown in per-class results")
     a = ap.parse_args()
     rng = random.Random(a.seed)
     os.makedirs(a.out, exist_ok=True)
@@ -426,8 +432,8 @@ def main():
     # failure = bottom quartile of CIDEr for that model+setting, or CIDEr < 30
     q25 = L.groupby(["model", "setting"])["CIDEr"].transform(lambda x: x.quantile(0.25))
     L["is_failure"] = (L["CIDEr"] <= q25) | (L["CIDEr"] < 30)
-    L["primary_error"] = [primary_error(f.split("; ") if f else []) if fail else ""
-                          for f, fail in zip(L["flags"], L["is_failure"])]
+    L["primary_error"] = [primary_error(f.split("; ") if f else [], c) if fail else ""
+                          for f, fail, c in zip(L["flags"], L["is_failure"], L["CIDEr"])]
     L.to_csv(os.path.join(a.out, "per_video_scores.csv"), index=False)
     vdf.to_csv(os.path.join(a.out, "video_descriptors.csv"))
 
@@ -450,7 +456,12 @@ def main():
 
     # ---- 02 per class ----------------------------------------------------
     print("[4/9] per-class table")
-    classes = [c for c in list(CLASS_KEYWORDS) + ["People & Daily life", "Other"] if c in set(vdf["class"])]
+    counts = vdf["class"].value_counts()
+    # classes with fewer than --min_class videos give noisy numbers; they still count in ALL
+    classes = [c for c in list(CLASS_KEYWORDS) + ["People & Daily life", "Other"] if counts.get(c, 0) >= a.min_class]
+    dropped = [c for c in counts.index if c not in classes]
+    if dropped:
+        print(f"  classes left out of per-class tables (< {a.min_class} videos): {dropped}")
     pc_rows = []
     for (m, s) in per_video:
         for c in classes + ["ALL"]:
@@ -467,11 +478,11 @@ def main():
         heat = heat.reindex(index=[m for m in models if m in heat.index], columns=classes + ["ALL"])
         if heat.empty:
             continue
-        fig, ax = plt.subplots(figsize=(1.45 * heat.shape[1] + 2, 0.7 * heat.shape[0] + 1.6))
+        fig, ax = plt.subplots(figsize=(1.6 * heat.shape[1] + 2, 0.7 * heat.shape[0] + 1.6))
         im = ax.imshow(heat.values, cmap="RdYlGn", vmin=0, vmax=max(200, np.nanmax(heat.values)))
         ax.set_xticks(range(heat.shape[1])); ax.set_yticks(range(heat.shape[0]))
         n_per = vdf["class"].value_counts()
-        ax.set_xticklabels([f"{c}\n(n={n_per.get(c, len(vdf))})" for c in heat.columns], fontsize=8.5)
+        ax.set_xticklabels([f"{c.replace(' & ', ' &' + chr(10))}\n(n={n_per.get(c, len(vdf))})" for c in heat.columns], fontsize=8.5)
         ax.set_yticklabels(heat.index)
         for i in range(heat.shape[0]):
             for j in range(heat.shape[1]):
@@ -548,7 +559,7 @@ def main():
             ax.set_xticks(range(4)); ax.set_xticklabels(["Q1\nlow", "Q2", "Q3", "Q4\nhigh"], fontsize=8)
             ax.set_title(f.replace("_", " "), fontsize=10); ax.spines[["top", "right"]].set_visible(False)
         axes[0].set_ylabel(f"mean CIDEr ({SETTINGS[S]})"); axes[-1].legend(fontsize=8)
-        fig.suptitle("What makes a clip hard? CIDEr by quartile of each clip property", weight="bold")
+        fig.suptitle("What makes a clip hard? CIDEr by quartile of each clip property", weight="bold", y=1.04)
         save(fig, os.path.join(fig_dir, "04_difficulty_factors.png"))
 
     # ---- helper to build example rows -----------------------------------
