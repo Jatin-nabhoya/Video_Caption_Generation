@@ -1,0 +1,26 @@
+# Idea 1: Qwen2.5-VL-3B + retrieval-augmented prompt (captions of similar TRAINING videos as hints).
+# Same as qwen25vl.yaml except run_name, epochs (the plain run peaked at epoch 1) and the rag block.
+run_name: qwen25vl_3b_lora_rag_v1
+model_name: Qwen/Qwen2.5-VL-3B-Instruct
+hf_repo: jatinnabhoya/Video_Caption_Generation
+data_root: /kaggle/input/datasets/jatinnabhoya/video-caption-generation/msvd
+num_frames: 8
+frame_size: 336
+fps: 1.0
+prompt: "Describe this video in one short sentence."
+epochs: 2
+batch_size: 2
+grad_accum: 8
+eval_batch_size: 4
+repeats: 2
+lr: 1.0e-4
+weight_decay: 0.0
+warmup_ratio: 0.05
+lora: {r: 16, alpha: 32, dropout: 0.05}
+max_new_tokens: 24
+num_beams: 3
+seed: 42
+rag:
+  hints_dir: results/rag   # from scripts/build_rag_index.py
+  k: 3                     # hints per video
+  dropout: 0.2             # share of training samples shown WITHOUT hints
