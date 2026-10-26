@@ -54,7 +54,7 @@ for epoch in range(state["epoch"], cfg["epochs"]):
     for i, b in enumerate(tqdm(train_dl, desc=f"epoch {epoch + 1}/{cfg['epochs']}", mininterval=60)):
         with torch.autocast("cuda", dtype=torch.float16):
             logits = model(pixel_values=b["pixel_values"].to(dev), input_ids=b["input_ids"].to(dev),
-                           attention_mask=b["attention_mask"].to(dev)).logits
+                           attention_mask=b["attention_mask"].to(dev), use_cache=False).logits
         loss = caption_loss(logits, b["labels"].to(dev))   # our own loss (library version shifts labels twice)
         scaler.scale(loss / cfg["grad_accum"]).backward()
         running += loss.item()

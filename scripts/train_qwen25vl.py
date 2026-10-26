@@ -1,4 +1,4 @@
-import argparse, os, random, sys, time
+import argparse, json, os, random, sys, time
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 os.environ.setdefault("PYTORCH_ALLOC_CONF", "expandable_segments:True")
@@ -32,8 +32,16 @@ model.enable_input_require_grads()
 print(f"run={run} starting at epoch {state['epoch']}")
 
 collate = make_qwen_collate(processor, cfg["prompt"], cfg["fps"])
-train_ds = MSVDVideoFrames(cfg["data_root"], "train", cfg["num_frames"], cfg["frame_size"], True, cfg["repeats"])
-val_ds = MSVDVideoFrames(cfg["data_root"], "val", cfg["num_frames"], cfg["frame_size"], train=False)
+rag = cfg.get("rag")            # Idea 1: retrieved captions in the prompt (None = plain captioning)
+def load_hints(split):
+    return json.load(open(os.path.join(rag["hints_dir"], f"hints_{split}.json"))) if rag else None
+rag_kw = dict(hint_k=rag["k"]) if rag else {}
+if rag:
+    print(f"RAG on: {rag['k']} hints per video from {rag['hints_dir']}, dropped {rag['dropout']:.0%} of the time in training")
+train_ds = MSVDVideoFrames(cfg["data_root"], "train", cfg["num_frames"], cfg["frame_size"], True, cfg["repeats"],
+                           hints=load_hints("train"), hint_dropout=rag["dropout"] if rag else 0.0, **rag_kw)
+val_ds = MSVDVideoFrames(cfg["data_root"], "val", cfg["num_frames"], cfg["frame_size"], train=False,
+                         hints=load_hints("val"), **rag_kw)
 if args.limit:
     train_ds.ids, val_ds.ids = train_ds.ids[:args.limit], val_ds.ids[:args.limit]
 train_dl = DataLoader(train_ds, cfg["batch_size"], shuffle=True, num_workers=4, collate_fn=collate, drop_last=True)

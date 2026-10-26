@@ -15,6 +15,8 @@ p.add_argument("--split", default="test")
 p.add_argument("--out", required=True)
 p.add_argument("--limit", type=int, default=0)
 p.add_argument("--num_beams", type=int, default=None, help="override config (use 1 if beam search runs out of memory)")
+p.add_argument("--rag_hints_dir", default=None, help="Idea 1: add retrieved captions to the prompt (e.g. results/rag)")
+p.add_argument("--rag_k", type=int, default=3)
 args = p.parse_args()
 cfg = yaml.safe_load(open(args.config))
 
@@ -26,7 +28,12 @@ processor, model = load_qwen25vl(cfg["model_name"], adapter_path=ckpt, trainable
 model.config.use_cache = True
 model.eval()
 
-ds = MSVDVideoFrames(cfg["data_root"], args.split, cfg["num_frames"], cfg["frame_size"], train=False)
+hints = None
+if args.rag_hints_dir:
+    hints = json.load(open(os.path.join(args.rag_hints_dir, f"hints_{args.split}.json")))
+    print(f"RAG on: {args.rag_k} hints per video")
+ds = MSVDVideoFrames(cfg["data_root"], args.split, cfg["num_frames"], cfg["frame_size"], train=False,
+                     hints=hints, hint_k=args.rag_k)
 if args.limit:
     ds.ids = ds.ids[:args.limit]
 dl = DataLoader(ds, cfg["eval_batch_size"], num_workers=4, collate_fn=make_qwen_collate(processor, cfg["prompt"], cfg["fps"]))
@@ -37,7 +44,7 @@ avg_len = sum(len(c.split()) for c in preds.values()) / len(preds)
 
 os.makedirs(os.path.dirname(args.out) or ".", exist_ok=True)
 result = {"model": "Qwen2.5-VL-3B-Instruct (QLoRA)", "run": cfg["run_name"], "checkpoint": args.checkpoint,
-          "split": args.split, "n_videos": len(preds), "num_beams": beams, "avg_caption_words": round(avg_len, 2),
+          "split": args.split, "n_videos": len(preds), "num_beams": beams, "rag_k": args.rag_k if hints else 0, "avg_caption_words": round(avg_len, 2),
           "scores": scores, "config": cfg}
 json.dump(result, open(args.out, "w"), indent=2)
 json.dump(preds, open(args.out.replace(".json", "_preds.json"), "w"), indent=2)
