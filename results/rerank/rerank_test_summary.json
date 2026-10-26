@@ -1,0 +1,70 @@
+{
+  "alpha": 0.5,
+  "val_grid": {
+    "0.0": 117.35594177019853,
+    "0.1": 113.71583497961682,
+    "0.2": 113.88334327735066,
+    "0.3": 112.93905262164941,
+    "0.4": 116.91825371658466,
+    "0.5": 118.92662758465036,
+    "0.6": 115.97334967729196,
+    "0.7": 112.07916811490935,
+    "0.8": 104.08812501271146,
+    "0.9": 82.42619198204558,
+    "1.0": 76.81880758523525
+  },
+  "scores": {
+    "BLIP-2 (top beam)": {
+      "BLEU-4": 75.68,
+      "METEOR": 49.91,
+      "ROUGE-L": 87.15,
+      "CIDEr": 178.61
+    },
+    "CLIP4Clip (top beam)": {
+      "BLEU-4": 22.85,
+      "METEOR": 26.96,
+      "ROUGE-L": 54.15,
+      "CIDEr": 45.89
+    },
+    "Rerank: consensus only": {
+      "BLEU-4": 47.26,
+      "METEOR": 36.82,
+      "ROUGE-L": 71.56,
+      "CIDEr": 100.17
+    },
+    "Rerank: CLIP only": {
+      "BLEU-4": 39.5,
+      "METEOR": 33.43,
+      "ROUGE-L": 64.18,
+      "CIDEr": 78.53
+    },
+    "Rerank: combined (alpha=0.5)": {
+      "BLEU-4": 48.56,
+      "METEOR": 37.47,
+      "ROUGE-L": 71.62,
+      "CIDEr": 102.13
+    },
+    "Oracle (best candidate, upper bound)": {
+      "BLEU-4": 84.52,
+      "METEOR": 55.53,
+      "ROUGE-L": 91.56,
+      "CIDEr": 211.77
+    }
+  },
+  "chosen_from": {
+    "CLIP4Clip": 474,
+    "BLIP-2": 196
+  },
+  "models": [
+    "git",
+    "blip2",
+    "qwen",
+    "clip4clip"
+  ],
+  "select_from": [
+    "blip2",
+    "clip4clip",
+    "git",
+    "qwen"
+  ]
+}
