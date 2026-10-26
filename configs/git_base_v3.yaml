@@ -1,0 +1,19 @@
+# GIT-base, longer run: v2 (5 epochs) was still improving on validation (CIDEr 66 -> 119).
+# Fresh run with a 10-epoch cosine schedule; everything else identical to git_base.yaml.
+run_name: git_base_ft_v3
+model_name: microsoft/git-base
+hf_repo: jatinnabhoya/Video_Caption_Generation
+data_root: /kaggle/input/datasets/jatinnabhoya/video-caption-generation/msvd
+num_frames: 6
+epochs: 10
+batch_size: 4
+grad_accum: 4
+grad_checkpointing: true
+lr: 5.0e-5
+weight_decay: 0.01
+warmup_ratio: 0.1
+repeats: 5
+max_len: 40
+num_beams: 3
+seed: 42
+eval_batch_size: 4
