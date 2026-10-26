@@ -49,18 +49,32 @@ class MSVDVideoFrames(MSVDFrames):
     """Same MSVD frames/splits as the other models, but returns raw PIL frames:
     Qwen's processor does its own resize/patching. Frames are resized to a fixed
     size (multiple of 28) so the number of visual tokens is constant."""
-    def __init__(self, root, split, num_frames=8, frame_size=336, train=True, repeats=1):
+    def __init__(self, root, split, num_frames=8, frame_size=336, train=True, repeats=1,
+                 hints=None, hint_k=3, hint_dropout=0.0):
         super().__init__(root, split, processor=None, num_frames=num_frames, train=train, repeats=repeats)
         assert num_frames % 2 == 0, "Qwen2.5-VL groups frames in pairs -> num_frames must be even"
         self.size = frame_size
+        # RAG (Idea 1): {video_id: [retrieved caption, ...]}; None = plain captioning
+        self.hints, self.hint_k, self.hint_dropout = hints, hint_k, hint_dropout
 
     def __getitem__(self, i):
         vid = self.ids[i]
         frames = [f.resize((self.size, self.size), Image.BICUBIC) for f in self.load_frames(vid)]
         item = {"frames": frames, "video_id": vid}
+        if self.hints is not None:
+            drop = self.train and random.random() < self.hint_dropout   # teaches the model to still watch the video
+            item["hints"] = [] if drop else self.hints.get(vid, [])[:self.hint_k]
         if self.train:
             item["caption"] = random.choice(self.caps[vid])
         return item
+
+
+def rag_prompt(prompt, hints):
+    """Prepend retrieved captions of similar training videos as (possibly wrong) hints."""
+    if not hints:
+        return prompt
+    lines = "\n".join(f"- {h}" for h in hints)
+    return f"Captions of similar videos (they may be wrong):\n{lines}\n{prompt}"
 
 
 def _chat(processor, caption=None, prompt=PROMPT):
@@ -80,7 +94,8 @@ def make_qwen_collate(processor, prompt=PROMPT, fps=1.0):
 
     def collate(batch):
         train = "caption" in batch[0]
-        texts = [_chat(processor, b["caption"].strip() if train else None, prompt) for b in batch]
+        texts = [_chat(processor, b["caption"].strip() if train else None, rag_prompt(prompt, b.get("hints")))
+                 for b in batch]
         enc = processor(text=texts, videos=[b["frames"] for b in batch], padding=True,
                         return_tensors="pt", fps=fps)
         out = dict(enc)
