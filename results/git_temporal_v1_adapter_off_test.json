@@ -1,0 +1,32 @@
+{
+  "model": "GIT-base",
+  "run": "git_temporal_v1",
+  "checkpoint": "best",
+  "split": "test",
+  "n_videos": 670,
+  "scores": {
+    "BLEU-4": 53.85,
+    "METEOR": 38.16,
+    "ROUGE-L": 75.1,
+    "CIDEr": 104.31
+  },
+  "config": {
+    "batch_size": 4,
+    "data_root": "/kaggle/input/datasets/jatinnabhoya/video-caption-generation/msvd",
+    "epochs": 5,
+    "eval_batch_size": 4,
+    "grad_accum": 4,
+    "grad_checkpointing": true,
+    "hf_repo": "jatinnabhoya/Video_Caption_Generation",
+    "lr": 5e-05,
+    "max_len": 40,
+    "model_name": "microsoft/git-base",
+    "num_beams": 3,
+    "num_frames": 6,
+    "repeats": 5,
+    "run_name": "git_temporal_v1",
+    "seed": 42,
+    "warmup_ratio": 0.1,
+    "weight_decay": 0.01
+  }
+}
