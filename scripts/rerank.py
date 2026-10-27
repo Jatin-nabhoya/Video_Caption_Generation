@@ -3,8 +3,12 @@
 Each candidate c for video v gets two scores:
   clip      = cosine(video, caption) from the fine-tuned CLIP4Clip   -> "does it match the video?"
   consensus = CIDEr of c against the OTHER models' candidates for v -> "do the other models agree?"
-Both are z-scored within the video, then  score = alpha * clip + (1 - alpha) * consensus.
-alpha is chosen on the validation split, then applied once to the test split.
+Both are z-scored within the video, then
+    score = alpha * clip + (1 - alpha) * consensus - gamma * beam_rank
+gamma keeps each model's own confidence (its top beam = rank 0) in the decision; a large gamma
+falls back to the top beams. alpha and gamma are tuned on the validation split, then applied once to test.
+CLIP4Clip's candidates vote but are never picked: they were retrieved BECAUSE of their CLIP score,
+so the CLIP signal would always favour them.
 
   python scripts/rerank.py --tune_split val --split test
 Needs results/candidates/<model>_<split>.json for both splits (scripts/generate_candidates.py).
@@ -26,6 +30,7 @@ from src.utils.hub import try_resume
 
 NAMES = {"git": "GIT", "blip2": "BLIP-2", "qwen": "Qwen2.5-VL", "clip4clip": "CLIP4Clip"}
 ALPHAS = [round(float(a), 1) for a in np.arange(0, 1.01, 0.1)]
+GAMMAS = [0.0, 0.25, 0.5, 1.0, 2.0, 4.0]
 
 
 def tokenize(d):
@@ -106,11 +111,11 @@ def build_rows(split, cands, refs, c4c_cfg, data_root):
     return by_vid
 
 
-def select(by_vid, alpha, allowed):
+def select(by_vid, alpha, allowed, gamma=0.0):
     preds = {}
     for v, group in by_vid.items():
         pool = [g for g in group if g["model"] in allowed]
-        best = max(pool, key=lambda g: alpha * g["z_clip"] + (1 - alpha) * g["z_consensus"])
+        best = max(pool, key=lambda g: alpha * g["z_clip"] + (1 - alpha) * g["z_consensus"] - gamma * g["rank"])
         preds[v] = best["caption"]
     return preds
 
@@ -127,7 +132,7 @@ if __name__ == "__main__":
     p.add_argument("--cand_dir", default="results/candidates")
     p.add_argument("--models", nargs="+", default=["git", "blip2", "qwen", "clip4clip"])
     p.add_argument("--select_from", nargs="+", default=None,
-                   help="models whose captions may be chosen (default: all); the rest still vote")
+                   help="models whose captions may be chosen (default: all except clip4clip); the rest still vote")
     p.add_argument("--tune_split", default="val")
     p.add_argument("--split", default="test")
     p.add_argument("--out_dir", default="results/rerank")
@@ -135,14 +140,17 @@ if __name__ == "__main__":
     os.makedirs(a.out_dir, exist_ok=True)
     ann = json.load(open(os.path.join(a.data_root, "msvd_annotations.json")))
     c4c_cfg = yaml.safe_load(open(a.clip4clip_config))
-    allowed = set(a.select_from or a.models)
+    allowed = set(a.select_from or [m for m in a.models if m != "clip4clip"])
 
     # 1) tune alpha on validation
     val = build_rows(a.tune_split, load_candidates(a.cand_dir, a.tune_split, a.models), ann[a.tune_split],
                      c4c_cfg, a.data_root)
-    grid = {al: fast_cider(select(val, al, allowed), ann[a.tune_split]) for al in ALPHAS}
-    alpha = max(grid, key=grid.get)
-    print("validation CIDEr by alpha (0 = consensus only, 1 = CLIP only):", grid, "-> alpha =", alpha)
+    val_refs = ann[a.tune_split]
+    grid = {(al, ga): fast_cider(select(val, al, allowed, ga), val_refs) for al in ALPHAS for ga in GAMMAS}
+    alpha, gamma = max(grid, key=grid.get)
+    print(f"validation: best alpha={alpha} gamma={gamma} -> CIDEr {grid[(alpha, gamma)]:.2f}")
+    for ga in GAMMAS:
+        print(f"  gamma={ga:<4}", " ".join(f"{grid[(al, ga)]:6.1f}" for al in ALPHAS), "  (alpha 0.0 ... 1.0)")
 
     # 2) apply once to test
     cands = load_candidates(a.cand_dir, a.split, a.models)
@@ -151,13 +159,14 @@ if __name__ == "__main__":
     systems = {f"{NAMES[m]} (top beam)": {v: cands[m][v][0] for v in test} for m in cands}
     systems["Rerank: consensus only"] = select(test, 0.0, allowed)
     systems["Rerank: CLIP only"] = select(test, 1.0, allowed)
-    systems[f"Rerank: combined (alpha={alpha})"] = select(test, alpha, allowed)
+    best_name = f"Rerank: tuned on val (alpha={alpha}, gamma={gamma})"
+    systems[best_name] = select(test, alpha, allowed, gamma)
     systems["Oracle (best candidate, upper bound)"] = {
         v: max((g for g in grp if g["model"] in allowed), key=lambda g: g["true_cider"])["caption"]
         for v, grp in test.items()}
 
     table = {name: score_captions(pr, refs) for name, pr in systems.items()}
-    final = systems[f"Rerank: combined (alpha={alpha})"]
+    final = systems[best_name]
     chosen_from = {}
     for v, grp in test.items():
         for g in grp:
@@ -166,7 +175,7 @@ if __name__ == "__main__":
                 break
 
     json.dump(final, open(os.path.join(a.out_dir, f"rerank_{a.split}_preds.json"), "w"), indent=2)
-    json.dump({"alpha": alpha, "val_grid": grid, "scores": table, "chosen_from": chosen_from,
+    json.dump({"alpha": alpha, "gamma": gamma, "val_grid": {f"{k[0]},{k[1]}": v for k, v in grid.items()}, "scores": table, "chosen_from": chosen_from,
                "models": a.models, "select_from": sorted(allowed)},
               open(os.path.join(a.out_dir, f"rerank_{a.split}_summary.json"), "w"), indent=2)
     json.dump([g for grp in test.values() for g in grp],
