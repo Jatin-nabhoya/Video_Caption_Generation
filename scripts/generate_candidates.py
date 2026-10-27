@@ -40,7 +40,7 @@ def run_git(cfg, args):
     from src.utils.generate import _cache_frame_features
     path, _ = try_resume(cfg["hf_repo"], f"{cfg['run_name']}/{args.checkpoint}")
     assert path, "GIT checkpoint not found on HF Hub"
-    processor, model = load_git(path, cfg["num_frames"])
+    processor, model = load_git(path, cfg["num_frames"], cfg.get("temporal_adapter"))
     model.to("cuda").eval()
     ds = MSVDFrames(cfg["data_root"], args.split, processor, cfg["num_frames"], train=False)
     if args.limit:

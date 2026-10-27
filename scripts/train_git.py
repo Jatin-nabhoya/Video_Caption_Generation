@@ -23,7 +23,7 @@ dev, t0, run = "cuda", time.time(), cfg["run_name"]
 
 # ---- resume automatically if this run already has a checkpoint on HF Hub
 ckpt_path, state = try_resume(cfg["hf_repo"], f"{run}/last")
-processor, model = load_git(ckpt_path or cfg["model_name"], cfg["num_frames"])
+processor, model = load_git(ckpt_path or cfg["model_name"], cfg["num_frames"], cfg.get("temporal_adapter"))
 state = state or {"epoch": 0, "best_cider": -1.0, "history": []}
 model.to(dev)
 if cfg.get("grad_checkpointing", False):
@@ -40,7 +40,13 @@ train_dl = DataLoader(train_ds, cfg["batch_size"], shuffle=True, num_workers=4,
 val_dl = DataLoader(val_ds, cfg.get("eval_batch_size", 4), num_workers=4, collate_fn=collate)
 
 # ---- optimizer / schedule
-opt = torch.optim.AdamW(model.parameters(), lr=cfg["lr"], weight_decay=cfg["weight_decay"])
+# the new adapter starts from scratch, so it gets its own (higher) learning rate
+adapter_params = [p for n, p in model.named_parameters() if "temporal_adapter" in n]
+base_params = [p for n, p in model.named_parameters() if "temporal_adapter" not in n]
+groups = [{"params": base_params, "lr": cfg["lr"]}]
+if adapter_params:
+    groups.append({"params": adapter_params, "lr": cfg["temporal_adapter"].get("lr", cfg["lr"])})
+opt = torch.optim.AdamW(groups, lr=cfg["lr"], weight_decay=cfg["weight_decay"])
 steps_per_epoch = len(train_dl) // cfg["grad_accum"]
 total_steps = steps_per_epoch * cfg["epochs"]
 sched = get_cosine_schedule_with_warmup(opt, int(cfg["warmup_ratio"] * total_steps), total_steps)
@@ -69,6 +75,8 @@ for epoch in range(state["epoch"], cfg["epochs"]):
     scores = score_captions(preds, val_ds.caps)
     state["epoch"] = epoch + 1
     state["history"].append({"epoch": epoch + 1, "train_loss": round(running / len(train_dl), 4), **scores})
+    if hasattr(model.git, "temporal_adapter"):
+        state["history"][-1]["adapter_gate"] = round(torch.tanh(model.git.temporal_adapter.gate.detach()).item(), 4)
     print(state["history"][-1], "| example:", next(iter(preds.values())))
 
     if scores["CIDEr"] > state["best_cider"]:

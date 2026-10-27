@@ -21,7 +21,7 @@ if args.checkpoint == "zeroshot":
 else:
     path, _ = try_resume(cfg["hf_repo"], f"{cfg['run_name']}/{args.checkpoint}")
     assert path, "checkpoint not found on HF Hub"
-processor, model = load_git(path, cfg["num_frames"])
+processor, model = load_git(path, cfg["num_frames"], cfg.get("temporal_adapter") if args.checkpoint != "zeroshot" else None)
 model.to("cuda")
 ds = MSVDFrames(cfg["data_root"], args.split, processor, cfg["num_frames"], train=False)
 if args.limit:
