@@ -13,6 +13,8 @@ class TemporalAdapter(nn.Module):
     concatenated frame tokens (B, T*N, D), and lets every spatial token attend to the SAME position in
     the other T-1 frames (attention over time, as in TimeSformer's divided attention). Its output is added
     back through a gate that starts at 0, so at step 0 the model is exactly the baseline GIT.
+    Only the adapter's CHANGE (encoder output minus its input) is gated - gating the whole output
+    (v1) mostly rescaled the original features, so the gate never learned.
     """
     def __init__(self, dim, num_frames, layers=1, heads=8, dropout=0.1):
         super().__init__()
@@ -28,10 +30,11 @@ class TemporalAdapter(nn.Module):
         if L % T:                       # single image or unexpected shape: leave untouched
             return x
         N = L // T
-        h = x.reshape(B, T, N, D).permute(0, 2, 1, 3).reshape(B * N, T, D)   # one short sequence per spatial token
-        h = self.encoder(h + self.time_pos.to(h.dtype))
-        h = h.reshape(B, N, T, D).permute(0, 2, 1, 3).reshape(B, L, D)
-        return x + torch.tanh(self.gate).to(x.dtype) * h
+        z = x.reshape(B, T, N, D).permute(0, 2, 1, 3).reshape(B * N, T, D)   # one short sequence per spatial token
+        z = z + self.time_pos.to(z.dtype)
+        delta = self.encoder(z) - z     # ONLY what the adapter adds (the encoder layer keeps a residual copy of z)
+        delta = delta.reshape(B, N, T, D).permute(0, 2, 1, 3).reshape(B, L, D)
+        return x + torch.tanh(self.gate).to(x.dtype) * delta
 
 
 def add_temporal_adapter(model, num_frames, adapter_cfg, checkpoint_dir=None):
