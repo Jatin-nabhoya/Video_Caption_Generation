@@ -8,7 +8,9 @@ Run this on YOUR LAPTOP (YouTube usually blocks cloud machines such as Kaggle):
     python download_vatex.py --out vatex                       # test + val + all of train
     python download_vatex.py --out vatex --limit_train 10000   # smaller train set
 It is safe to stop and restart: finished clips are skipped.
-If YouTube asks you to "confirm you're not a bot", add  --cookies_from_browser chrome
+If YouTube asks you to sign in / "confirm you're not a bot": export cookies once, then pass the file
+    yt-dlp --cookies-from-browser chrome --cookies cookies.txt --skip-download "https://www.youtube.com/watch?v=jNQXAC9IVRw"
+    python download_vatex.py --out vatex --cookies cookies.txt
 
 Output (same layout as our MSVD data):
   <out>/frames/<videoID>/00.jpg ... 11.jpg
@@ -53,10 +55,20 @@ def get_annotations(out):
     return ann
 
 
+class _Silent:
+    """yt-dlp prints every error in red even with quiet=True; we record reasons in status.json instead."""
+    def debug(self, msg): pass
+    def info(self, msg): pass
+    def warning(self, msg): pass
+    def error(self, msg): pass
+
+
 def stream_url(yt_id, height, cookies):
-    opts = {"quiet": True, "no_warnings": True, "noplaylist": True,
+    opts = {"quiet": True, "no_warnings": True, "noplaylist": True, "logger": _Silent(),
             "format": f"bv*[height<={height}][ext=mp4]/bv*[height<={height}]/b[height<={height}]/b"}
-    if cookies:
+    if cookies and os.path.isfile(cookies):
+        opts["cookiefile"] = cookies                 # cookies.txt exported once (fast, no keychain prompts)
+    elif cookies:
         opts["cookiesfrombrowser"] = (cookies,)
     with yt_dlp.YoutubeDL(opts) as ydl:
         info = ydl.extract_info(f"https://www.youtube.com/watch?v={yt_id}", download=False)
@@ -93,7 +105,12 @@ def process(video_id, frames_dir, n, height, cookies, min_frames):
             reason = f"only {got} frames: {err[:200]}"
         except yt_dlp.utils.DownloadError as e:
             msg = str(e).replace("ERROR: ", "")[:200]
-            if any(k in msg.lower() for k in ("unavailable", "private", "removed", "terminated", "copyright", "age")):
+            low = msg.lower()
+            if "sign in to confirm" in low or "please sign in" in low or "429" in low:
+                time.sleep(20)                       # YouTube bot check: slow down, keep for a re-run
+                reason = "blocked by YouTube bot check: " + msg
+                continue
+            if any(k in low for k in ("unavailable", "private", "removed", "terminated", "copyright", "age")):
                 if not os.listdir(d):
                     os.rmdir(d)
                 return video_id, "missing", msg      # gone for good, no retry
@@ -114,6 +131,7 @@ def main():
     p.add_argument("--height", type=int, default=360)
     p.add_argument("--workers", type=int, default=4)
     p.add_argument("--cookies_from_browser", default=None, help="chrome | firefox | safari | edge")
+    p.add_argument("--cookies", default=None, help="cookies.txt exported once with yt-dlp (recommended)")
     a = p.parse_args()
     ann = get_annotations(a.out)
     frames_dir = f"{a.out}/frames"
@@ -130,17 +148,20 @@ def main():
         print(f"[{split}] {len(ids)} clips, {len(ids) - len(todo)} already done, {len(todo)} to go")
         done = 0
         with ThreadPoolExecutor(a.workers) as ex:
-            futs = [ex.submit(process, v, frames_dir, a.num_frames, a.height, a.cookies_from_browser, a.min_frames)
+            futs = [ex.submit(process, v, frames_dir, a.num_frames, a.height, a.cookies or a.cookies_from_browser,
+                              a.min_frames)
                     for v in todo]
             for f in as_completed(futs):
                 vid, state, reason = f.result()
                 with lock:
                     status[vid] = {"split": split, "state": state, "reason": reason}
                     done += 1
-                    if done % 100 == 0 or done == len(todo):
+                    if done % 25 == 0 or done == len(todo):
                         json.dump(status, open(status_path, "w"))
                         n_ok = sum(1 for v in ids if status.get(v, {}).get("state") == "ok")
-                        print(f"[{split}] {done}/{len(todo)} processed | ok so far {n_ok}/{len(ids)}", flush=True)
+                        st = [status.get(v, {}).get("state") for v in ids]
+                        print(f"[{split}] {done}/{len(todo)} processed | ok {n_ok} | gone {st.count('missing')} "
+                              f"| failed {st.count('failed')} (re-run retries these)", flush=True)
         json.dump(status, open(status_path, "w"))
 
     # annotations only for clips that have frames
