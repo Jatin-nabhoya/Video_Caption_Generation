@@ -6,7 +6,10 @@ from torch.utils.data import Dataset
 class MSVDFrames(Dataset):
     """Reads pre-extracted frames + msvd_annotations.json."""
     def __init__(self, root, split, processor, num_frames=6, train=True, repeats=1):
-        self.caps = json.load(open(os.path.join(root, "msvd_annotations.json")))[split]
+        ann = os.path.join(root, "annotations.json")          # MSR-VTT / VATEX
+        if not os.path.exists(ann):
+            ann = os.path.join(root, "msvd_annotations.json")  # MSVD (original build)
+        self.caps = json.load(open(ann))[split]
         self.root, self.proc, self.nf, self.train = root, processor, num_frames, train
         vids = sorted(self.caps)
         self.ids = [v for v in vids for _ in range(repeats)] if train else vids
