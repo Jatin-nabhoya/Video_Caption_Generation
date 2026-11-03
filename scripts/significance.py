@@ -34,6 +34,8 @@ COMPARISONS = [
                        "GIT + adapter v2", R + "git_temporal_v2_best_test_preds.json"),
     ("Idea 3 rerank", "BLIP-2 alone (top beam)", R + "blip2_v1_best_test_preds.json",
                       "Rerank (4 models, tuned on val)", R + "rerank/rerank_test_preds.json"),
+    ("Novel: SG-RQF", "BLIP-2 fine-tuned (baseline)", R + "blip2_v1_best_test_preds.json",
+                      "SG-RQF (ours)", R + "sgrqf_msvd_v1_best_test_preds.json"),
 ]
 
 
