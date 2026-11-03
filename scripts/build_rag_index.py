@@ -9,7 +9,7 @@
 Output: results/rag/hints_<split>.json = {video_id: [caption, ...]}  (+ *_meta.json with scores)
   python scripts/build_rag_index.py --config configs/clip4clip.yaml --k 5
 """
-import argparse, json, os, sys
+import argparse, glob, json, os, re, sys
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 import numpy as np
@@ -22,9 +22,46 @@ from src.models.clip4clip import encode_text_list, encode_video_set, load_clip4c
 from src.utils.hub import try_resume
 
 
+SOURCE_URL = {}   # MSR-VTT: video_id -> YouTube url (from the original annotation files)
+
+
 def source_id(vid):
-    """'eyhzdC936uk_15_27' -> 'eyhzdC936uk' (the YouTube video the clip was cut from)."""
+    """'eyhzdC936uk_15_27' -> 'eyhzdC936uk' (MSVD / VATEX: the YouTube video the clip was cut from).
+    MSR-VTT ids ('video123') carry no source, so we use the url from its original annotation files."""
+    if vid in SOURCE_URL:
+        return SOURCE_URL[vid]
     return vid.rsplit("_", 2)[0]
+
+
+def load_source_urls(data_root):
+    for f in glob.glob(os.path.join(data_root, "original_annotations", "*videodatainfo.json")):
+        for v in json.load(open(f))["videos"]:
+            SOURCE_URL[v["video_id"]] = v["url"]
+    if SOURCE_URL:
+        print(f"same-source filter: {len(SOURCE_URL)} MSR-VTT urls loaded")
+
+
+def consensus_captions(caps_by_vid):
+    """Most central caption of each video: highest CIDEr-D against that video's OTHER captions."""
+    from pycocoevalcap.cider.cider import Cider
+    norm = lambda c: " ".join(re.findall(r"[a-z0-9']+", c.lower()))
+    gts, res, keys = {}, {}, []
+    for v, caps in caps_by_vid.items():
+        caps = [c for c in caps if norm(c)]
+        if len(caps) < 2:
+            continue
+        for i, c in enumerate(caps):
+            key = f"{v}#{i}"
+            gts[key] = [norm(o) for j, o in enumerate(caps) if j != i]
+            res[key] = [norm(c)]
+            keys.append((key, v, c))
+    _, scores = Cider().compute_score(gts, res)
+    best = {}
+    for (key, v, c), s in zip(keys, scores):
+        if v not in best or s > best[v][0]:
+            best[v] = (float(s), c)
+    out = {v: best[v][1] if v in best else caps[0] for v, caps in caps_by_vid.items()}
+    return out
 
 
 class Index:
@@ -54,8 +91,12 @@ def main():
     p.add_argument("--k", type=int, default=5, help="neighbours stored per video (training uses the first 3)")
     p.add_argument("--splits", nargs="+", default=["train", "val", "test"])
     p.add_argument("--out_dir", default="results/rag")
+    p.add_argument("--data_root", default=None, help="other dataset (MSR-VTT / VATEX); retriever = our CLIP4Clip")
     a = p.parse_args()
     cfg = yaml.safe_load(open(a.config))
+    if a.data_root:
+        cfg["data_root"] = a.data_root
+    load_source_urls(cfg["data_root"])
     path, _ = try_resume(cfg["hf_repo"], f"{cfg['run_name']}/best")
     assert path, "fine-tuned CLIP4Clip checkpoint not found on HF Hub"
     processor, model = load_clip4clip(path)
@@ -78,6 +119,8 @@ def main():
     by_vid = {}
     for i, v in enumerate(cap_vid):
         by_vid.setdefault(v, []).append(i)
+    central = consensus_captions(train_ds.caps)
+    print("consensus caption example:", train_vids[0], "->", central[train_vids[0]])
 
     os.makedirs(a.out_dir, exist_ok=True)
     for split in a.splits:
@@ -95,7 +138,8 @@ def main():
                     continue
                 rows = by_vid[nv]
                 best = rows[int((C[rows] @ V[qi]).argmax())]     # neighbour caption closest to the query video
-                chosen.append({"neighbour": nv, "video_sim": round(float(s), 4), "caption": cap_text[best]})
+                chosen.append({"neighbour": nv, "video_sim": round(float(s), 4), "caption": cap_text[best],
+                               "consensus_caption": central[nv]})
                 if len(chosen) == a.k:
                     break
             hints[q] = [c["caption"] for c in chosen]

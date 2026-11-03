@@ -1,0 +1,22 @@
+# SG-RQF on MSVD: identical to configs/blip2.yaml (the 178.3 baseline) + the sgrqf block
+run_name: sgrqf_msvd_v1
+model_name: Salesforce/blip2-opt-2.7b
+hf_repo: jatinnabhoya/Video_Caption_Generation
+data_root: /kaggle/input/datasets/jatinnabhoya/video-caption-generation/msvd
+num_frames: 6
+epochs: 3
+batch_size: 4
+grad_accum: 4
+eval_batch_size: 4
+repeats: 5
+max_len: 40
+lr: 2.0e-5
+weight_decay: 0.05
+warmup_ratio: 0.1
+num_beams: 3
+seed: 42
+sgrqf:
+  hints_dir: results/rag_sgrqf/msvd   # written by build_rag_index.py (see notebook)
+  k: 3                                # neighbours per video
+  select: consensus                   # consensus | clip  (ablation)
+  dropout: 0.2                        # all hints removed for 20% of training samples

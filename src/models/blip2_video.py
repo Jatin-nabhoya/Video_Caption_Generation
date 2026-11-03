@@ -96,9 +96,9 @@ def generate_blip2(model, tokenizer, loader, device, num_beams=3, max_new_tokens
     return preds
 
 
-def push_trainable(model, state, repo_id, subfolder, local_root="/kaggle/working/ckpt"):
+def push_trainable(model, state, repo_id, subfolder, local_root="/kaggle/working/ckpt", prefixes=TRAINABLE_PREFIXES):
     path = os.path.join(local_root, subfolder); os.makedirs(path, exist_ok=True)
-    sd = {k: v.detach().cpu() for k, v in model.state_dict().items() if k.startswith(TRAINABLE_PREFIXES)}
+    sd = {k: v.detach().cpu() for k, v in model.state_dict().items() if k.startswith(prefixes)}
     torch.save(sd, os.path.join(path, "trainable.pt"))
     json.dump(state, open(os.path.join(path, "state.json"), "w"), indent=2)
     create_repo(repo_id, private=True, exist_ok=True)
