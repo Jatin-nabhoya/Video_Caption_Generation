@@ -20,6 +20,8 @@ import requests
 FOLDER_KEY = "h14iarbs62e7p"   # https://www.mediafire.com/folder/h14iarbs62e7p/shared
 REQUIRED = ["train_val_videos.zip", "test_videos.zip", "train_val_annotation.zip", "test_videodatainfo.json.zip"]
 EXPECTED = {"train": 6513, "val": 497, "test": 2990}      # Xu et al. 2016, Table/Sec. 3
+# Same 10,000 original clips, hosted by Oxford VGG (Frozen in Time, Bain et al. ICCV 2021); linked by CLIP4Clip.
+OXFORD_URL = "https://www.robots.ox.ac.uk/~maxbain/frozen-in-time/data/MSRVTT.zip"
 SPLIT_NAME = {"train": "train", "validate": "val", "test": "test"}
 UA = {"User-Agent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0 Safari/537.36"}
 
@@ -107,6 +109,29 @@ def load_split_json(paths):
     return ann, n_sent
 
 
+def split_by_index(vid):
+    """Official MSR-VTT split is contiguous: video0-6512 train, 6513-7009 val, 7010-9999 test."""
+    n = int(vid.replace("video", ""))
+    return "train" if n < 6513 else "val" if n < 7010 else "test"
+
+
+def load_merged_json(path):
+    """MSR_VTT.json (one file for all 10k clips): original layout, or COCO style {"annotations": [...]}."""
+    d = json.load(open(path))
+    if isinstance(d, dict) and "videos" in d and "sentences" in d:
+        return load_split_json([path])
+    rows = d["annotations"] if isinstance(d, dict) else d
+    ann, n_sent = {s: {} for s in EXPECTED}, 0
+    for r in rows:
+        vid = r.get("video_id", r.get("image_id"))
+        vid = vid if str(vid).startswith("video") else f"video{int(vid)}"
+        caps = r["caption"] if isinstance(r["caption"], list) else [r["caption"]]
+        for c in caps:
+            ann[split_by_index(vid)].setdefault(vid, []).append(c.strip())
+            n_sent += 1
+    return ann, n_sent
+
+
 def extract(job):
     vid, src, out_dir, n = job
     d = os.path.join(out_dir, vid)
@@ -128,6 +153,7 @@ def main():
     p.add_argument("--work", default="/tmp/msrvtt_build")      # big temporary files, not saved by Kaggle
     p.add_argument("--out", default="/kaggle/working/msrvtt")
     p.add_argument("--zips_dir", default=None, help="folder that already holds the 4 original zips")
+    p.add_argument("--oxford", action="store_true", help="download the original clips from Oxford (MSRVTT.zip)")
     p.add_argument("--num_frames", type=int, default=12)
     p.add_argument("--workers", type=int, default=8)
     p.add_argument("--no_count_check", action="store_true", help="testing only: skip the official-count checks")
@@ -135,12 +161,17 @@ def main():
     os.makedirs(a.work, exist_ok=True); os.makedirs(f"{a.out}/frames", exist_ok=True)
 
     # 1) original zips (Kaggle unzips uploaded .zip files, so --zips_dir may hold zips OR their contents)
+    zips = {}
     if a.zips_dir:
         zips = {n: os.path.join(a.zips_dir, n) for n in REQUIRED if os.path.isfile(os.path.join(a.zips_dir, n))}
         print(f"--zips_dir: {len(zips)} zip(s) found, the rest is read as already-unzipped files")
-    else:
+    if a.oxford:
+        zips["MSRVTT.zip"] = os.path.join(a.work, "MSRVTT.zip")
+        download(OXFORD_URL, zips["MSRVTT.zip"])
+    if not a.zips_dir and not a.oxford:
         zips = fetch_from_mediafire(a.work)
-    card = {"dataset": "MSR-VTT (Xu et al., CVPR 2016)", "source": a.zips_dir or f"mediafire folder {FOLDER_KEY}",
+    source = [x for x in (a.zips_dir, OXFORD_URL if a.oxford else None) if x] or [f"mediafire folder {FOLDER_KEY}"]
+    card = {"dataset": "MSR-VTT (Xu et al., CVPR 2016)", "source": source,
             "files": {n: {"bytes": os.path.getsize(z), "sha256": sha256(z)} for n, z in zips.items()}}
 
     # 2) unzip
@@ -150,7 +181,7 @@ def main():
         print("unzipping", n)
         with zipfile.ZipFile(z) as zf:
             zf.extractall(ext)
-        if not a.zips_dir:
+        if not (a.zips_dir and z.startswith(a.zips_dir)):
             os.remove(z)          # free disk; sha256 is already in the data card
     roots = [ext] + ([a.zips_dir] if a.zips_dir else [])
 
@@ -166,12 +197,22 @@ def main():
     # 3) original annotations -> splits, checked against the paper
     found = find("*videodatainfo.json")
     need = ["train_val_videodatainfo.json", "test_videodatainfo.json"]
-    assert all(n in found for n in need), f"annotation json missing, found only: {sorted(found)}"
-    jsons = [found[n] for n in need]
+    if all(n in found for n in need):          # the original 2016 annotation files (preferred)
+        jsons = [found[n] for n in need]
+        ann, n_sent = load_split_json(jsons)
+        card["annotation_source"] = "original train_val_videodatainfo.json + test_videodatainfo.json"
+        off = [v for sp, vids in ann.items() for v in vids if split_by_index(v) != sp]
+        print(f"official split field vs video-id ranges: {len(off)} disagreements")
+    else:                                       # MSR_VTT.json inside the Oxford zip
+        merged = find("MSR_VTT.json")
+        assert merged, f"no annotation file found (have: {sorted(found)}); upload the 2 annotation zips"
+        jsons = [merged["MSR_VTT.json"]]
+        ann, n_sent = load_merged_json(jsons[0])
+        card["annotation_source"] = "MSR_VTT.json from the Oxford copy; split from official video-id ranges"
+    print("annotations:", card["annotation_source"])
     os.makedirs(f"{a.out}/original_annotations", exist_ok=True)
     for j in jsons:
         shutil.copy(j, f"{a.out}/original_annotations/")
-    ann, n_sent = load_split_json(jsons)
     counts = {s: len(v) for s, v in ann.items()}
     print("videos per split:", counts, "| captions:", n_sent)
     if not a.no_count_check:
