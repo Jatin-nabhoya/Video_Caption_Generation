@@ -134,11 +134,10 @@ def main():
     a = p.parse_args()
     os.makedirs(a.work, exist_ok=True); os.makedirs(f"{a.out}/frames", exist_ok=True)
 
-    # 1) original zips
+    # 1) original zips (Kaggle unzips uploaded .zip files, so --zips_dir may hold zips OR their contents)
     if a.zips_dir:
-        zips = {n: os.path.join(a.zips_dir, n) for n in REQUIRED}
-        absent = [n for n, z in zips.items() if not os.path.exists(z)]
-        assert not absent, f"missing in --zips_dir: {absent}"
+        zips = {n: os.path.join(a.zips_dir, n) for n in REQUIRED if os.path.isfile(os.path.join(a.zips_dir, n))}
+        print(f"--zips_dir: {len(zips)} zip(s) found, the rest is read as already-unzipped files")
     else:
         zips = fetch_from_mediafire(a.work)
     card = {"dataset": "MSR-VTT (Xu et al., CVPR 2016)", "source": a.zips_dir or f"mediafire folder {FOLDER_KEY}",
@@ -146,17 +145,29 @@ def main():
 
     # 2) unzip
     ext = os.path.join(a.work, "extracted")
+    os.makedirs(ext, exist_ok=True)
     for n, z in zips.items():
         print("unzipping", n)
         with zipfile.ZipFile(z) as zf:
             zf.extractall(ext)
         if not a.zips_dir:
             os.remove(z)          # free disk; sha256 is already in the data card
+    roots = [ext] + ([a.zips_dir] if a.zips_dir else [])
+
+    def find(pattern):
+        """Every file matching pattern under the search roots, one per file name."""
+        hits = {}
+        for r in roots:
+            for f in glob.glob(f"{r}/**/{pattern}", recursive=True):
+                if os.path.isfile(f):
+                    hits.setdefault(os.path.basename(f), f)
+        return hits
 
     # 3) original annotations -> splits, checked against the paper
-    jsons = [glob.glob(f"{ext}/**/{n}", recursive=True) for n in ("train_val_videodatainfo.json", "test_videodatainfo.json")]
-    assert all(len(j) == 1 for j in jsons), f"annotation json not found exactly once: {jsons}"
-    jsons = [j[0] for j in jsons]
+    found = find("*videodatainfo.json")
+    need = ["train_val_videodatainfo.json", "test_videodatainfo.json"]
+    assert all(n in found for n in need), f"annotation json missing, found only: {sorted(found)}"
+    jsons = [found[n] for n in need]
     os.makedirs(f"{a.out}/original_annotations", exist_ok=True)
     for j in jsons:
         shutil.copy(j, f"{a.out}/original_annotations/")
@@ -168,7 +179,7 @@ def main():
         assert n_sent == 200000, f"{n_sent} captions, the original release has 200,000"
 
     # 4) videos
-    videos = {os.path.splitext(os.path.basename(v))[0]: v for v in glob.glob(f"{ext}/**/*.mp4", recursive=True)}
+    videos = {os.path.splitext(n)[0]: f for n, f in find("*.mp4").items()}
     all_ids = [v for s in ann.values() for v in s]
     no_file = [v for v in all_ids if v not in videos]
     print(f"video files: {len(videos)} | ids without a file: {len(no_file)}")
