@@ -5,10 +5,10 @@
   "split": "test",
   "n_videos": 2990,
   "scores": {
-    "BLEU-4": 50.09,
-    "METEOR": 32.54,
-    "ROUGE-L": 66.22,
-    "CIDEr": 71.03
+    "BLEU-4": 50.53,
+    "METEOR": 32.7,
+    "ROUGE-L": 66.54,
+    "CIDEr": 71.63
   },
   "config": {
     "run_name": "blip2_msrvtt_v1",
