@@ -17,7 +17,7 @@
       "wins": 328,
       "ties": 147,
       "losses": 195,
-      "p_holm": 0.0005999400059994001,
+      "p_holm": 0.0006999300069993001,
       "significant": true
     },
     {
@@ -34,7 +34,7 @@
       "wins": 302,
       "ties": 173,
       "losses": 195,
-      "p_holm": 0.0005999400059994001,
+      "p_holm": 0.0006999300069993001,
       "significant": true
     },
     {
@@ -51,7 +51,7 @@
       "wins": 171,
       "ties": 359,
       "losses": 140,
-      "p_holm": 0.030396960303969604,
+      "p_holm": 0.03799620037996201,
       "significant": true
     },
     {
@@ -68,7 +68,7 @@
       "wins": 154,
       "ties": 408,
       "losses": 108,
-      "p_holm": 0.0044995500449955,
+      "p_holm": 0.0053994600539946005,
       "significant": true
     },
     {
@@ -187,7 +187,7 @@
       "wins": 174,
       "ties": 315,
       "losses": 181,
-      "p_holm": 0.0024997500249975,
+      "p_holm": 0.0029997000299970002,
       "significant": true
     },
     {
@@ -204,8 +204,42 @@
       "wins": 139,
       "ties": 391,
       "losses": 140,
-      "p_holm": 0.035996400359964,
+      "p_holm": 0.044995500449955,
       "significant": true
+    },
+    {
+      "idea": "Novel: SG-RQF",
+      "A": "BLIP-2 fine-tuned (baseline)",
+      "B": "SG-RQF (ours)",
+      "metric": "CIDEr",
+      "mean_A": 178.34109178254988,
+      "mean_B": 174.5992071834874,
+      "diff": -3.7418845990624696,
+      "ci_low": -7.52835415786149,
+      "ci_high": 0.0200936873370815,
+      "p_value": 0.05499450054994501,
+      "wins": 112,
+      "ties": 401,
+      "losses": 157,
+      "p_holm": 0.21997800219978003,
+      "significant": false
+    },
+    {
+      "idea": "Novel: SG-RQF",
+      "A": "BLIP-2 fine-tuned (baseline)",
+      "B": "SG-RQF (ours)",
+      "metric": "ROUGE-L",
+      "mean_A": 86.99193943367338,
+      "mean_B": 86.11681144421092,
+      "diff": -0.8751279894624614,
+      "ci_low": -1.5825983443082003,
+      "ci_high": -0.17514229870271475,
+      "p_value": 0.015898410158984102,
+      "wins": 94,
+      "ties": 449,
+      "losses": 127,
+      "p_holm": 0.06359364063593641,
+      "significant": false
     }
   ]
 }
