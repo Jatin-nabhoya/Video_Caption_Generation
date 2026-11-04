@@ -1,0 +1,77 @@
+{
+  "model": "SG-RQF (BLIP-2 OPT-2.7B + similarity-gated retrieval Q-Former)",
+  "run": "sgrqf_msvd_v1",
+  "checkpoint": "best",
+  "split": "test",
+  "n_videos": 670,
+  "scores": {
+    "BLEU-4": 74.17,
+    "METEOR": 49.2,
+    "ROUGE-L": 86.12,
+    "CIDEr": 174.6
+  },
+  "no_hints": false,
+  "gate_quantile": 0.4,
+  "gate_similarity": 0.8366,
+  "val_gate_sweep": {
+    "0.0": {
+      "gate": null,
+      "BLEU-4": 76.06,
+      "METEOR": 49.84,
+      "ROUGE-L": 88.14,
+      "CIDEr": 193.8
+    },
+    "0.1": {
+      "gate": 0.77229,
+      "BLEU-4": 76.22,
+      "METEOR": 49.48,
+      "ROUGE-L": 88.34,
+      "CIDEr": 192.2
+    },
+    "0.2": {
+      "gate": 0.7997799999999999,
+      "BLEU-4": 76.12,
+      "METEOR": 49.71,
+      "ROUGE-L": 88.45,
+      "CIDEr": 191.31
+    },
+    "0.3": {
+      "gate": 0.81947,
+      "BLEU-4": 76.76,
+      "METEOR": 49.77,
+      "ROUGE-L": 88.51,
+      "CIDEr": 191.45
+    },
+    "0.4": {
+      "gate": 0.8366,
+      "BLEU-4": 77.18,
+      "METEOR": 49.82,
+      "ROUGE-L": 88.62,
+      "CIDEr": 194.49
+    }
+  },
+  "config": {
+    "run_name": "sgrqf_msvd_v1",
+    "model_name": "Salesforce/blip2-opt-2.7b",
+    "hf_repo": "jatinnabhoya/Video_Caption_Generation",
+    "data_root": "/kaggle/input/datasets/jatinnabhoya/video-caption-generation/msvd",
+    "num_frames": 6,
+    "epochs": 3,
+    "batch_size": 4,
+    "grad_accum": 4,
+    "eval_batch_size": 4,
+    "repeats": 5,
+    "max_len": 40,
+    "lr": 2e-05,
+    "weight_decay": 0.05,
+    "warmup_ratio": 0.1,
+    "num_beams": 3,
+    "seed": 42,
+    "sgrqf": {
+      "hints_dir": "results/rag_sgrqf/msvd",
+      "k": 3,
+      "select": "consensus",
+      "dropout": 0.2
+    }
+  }
+}
