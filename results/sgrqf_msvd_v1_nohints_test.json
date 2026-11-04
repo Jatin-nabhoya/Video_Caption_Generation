@@ -1,0 +1,41 @@
+{
+  "model": "SG-RQF (BLIP-2 OPT-2.7B + similarity-gated retrieval Q-Former)",
+  "run": "sgrqf_msvd_v1",
+  "checkpoint": "best",
+  "split": "test",
+  "n_videos": 670,
+  "scores": {
+    "BLEU-4": 75.11,
+    "METEOR": 49.61,
+    "ROUGE-L": 86.43,
+    "CIDEr": 176.69
+  },
+  "no_hints": true,
+  "gate_quantile": 0.0,
+  "gate_similarity": null,
+  "val_gate_sweep": {},
+  "config": {
+    "run_name": "sgrqf_msvd_v1",
+    "model_name": "Salesforce/blip2-opt-2.7b",
+    "hf_repo": "jatinnabhoya/Video_Caption_Generation",
+    "data_root": "/kaggle/input/datasets/jatinnabhoya/video-caption-generation/msvd",
+    "num_frames": 6,
+    "epochs": 3,
+    "batch_size": 4,
+    "grad_accum": 4,
+    "eval_batch_size": 4,
+    "repeats": 5,
+    "max_len": 40,
+    "lr": 2e-05,
+    "weight_decay": 0.05,
+    "warmup_ratio": 0.1,
+    "num_beams": 3,
+    "seed": 42,
+    "sgrqf": {
+      "hints_dir": "results/rag_sgrqf/msvd",
+      "k": 3,
+      "select": "consensus",
+      "dropout": 0.2
+    }
+  }
+}
