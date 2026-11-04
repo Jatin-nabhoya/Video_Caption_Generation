@@ -1,0 +1,22 @@
+# SG-RQF on MSR-VTT: identical to blip2_msrvtt.yaml + the sgrqf block
+run_name: sgrqf_msrvtt_v1
+model_name: Salesforce/blip2-opt-2.7b
+hf_repo: jatinnabhoya/Video_Caption_Generation
+data_root: /kaggle/input/msrvtt-original/msrvtt   # set automatically by the notebook (Cell 1)
+num_frames: 6
+epochs: 3
+batch_size: 4
+grad_accum: 4
+eval_batch_size: 4
+repeats: 1
+max_len: 40
+lr: 2.0e-5
+weight_decay: 0.05
+warmup_ratio: 0.1
+num_beams: 3
+seed: 42
+sgrqf:
+  hints_dir: results/rag_sgrqf/msrvtt
+  k: 3
+  select: consensus
+  dropout: 0.2

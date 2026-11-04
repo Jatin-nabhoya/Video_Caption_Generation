@@ -40,6 +40,8 @@ COMPARISONS = [
 
 
 def find_refs(data_root):
+    if data_root and os.path.exists(os.path.join(data_root, "annotations.json")):   # MSR-VTT / VATEX
+        return json.load(open(os.path.join(data_root, "annotations.json")))["test"]
     for c in [data_root, "/kaggle/input/datasets/jatinnabhoya/video-caption-generation/msvd",
               "/kaggle/input/video-caption-generation/msvd", "data/msvd"]:
         if c and os.path.exists(os.path.join(c, "msvd_annotations.json")):
@@ -90,12 +92,16 @@ def main():
     ap.add_argument("--n_boot", type=int, default=10000)
     ap.add_argument("--seed", type=int, default=0)
     ap.add_argument("--out_dir", default="results/significance")
+    ap.add_argument("--pair", nargs=4, metavar=("LABEL_A", "PREDS_A", "LABEL_B", "PREDS_B"), default=None,
+                    help="test just this pair (e.g. another dataset; give --data_root for its references)")
+    ap.add_argument("--name", default="pair", help="tag for --pair results")
     a = ap.parse_args()
     rng = np.random.default_rng(a.seed)
     refs = find_refs(a.data_root)
 
     comps = []
-    for idea, la, fa, lb, fb in COMPARISONS:
+    todo = [(a.name, a.pair[0], a.pair[1], a.pair[2], a.pair[3])] if a.pair else COMPARISONS
+    for idea, la, fa, lb, fb in todo:
         missing = [f for f in (fa, fb) if not os.path.exists(f)]
         if missing:
             print(f"SKIP {la} vs {lb}: missing {missing}")
