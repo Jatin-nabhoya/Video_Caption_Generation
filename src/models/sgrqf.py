@@ -52,7 +52,20 @@ def add_hint_modules(model, bert_name=BERT):
     return model
 
 
-def load_sgrqf(base="Salesforce/blip2-opt-2.7b", num_frames=6, trainable_path=None, bert_name=BERT):
+def warm_start_from_baseline(model, baseline_path):
+    """v2: start from the TRAINED BLIP-2 baseline (its Q-Former, queries, projection, frame embeddings), then
+    re-copy the text feed-forward layers from the trained query ones. With no hints the model is then exactly
+    the baseline, so fine-tuning with hints starts from the baseline's score instead of from scratch."""
+    sd = torch.load(baseline_path, map_location="cpu")
+    missing, unexpected = model.load_state_dict(sd, strict=False)
+    assert not unexpected, unexpected
+    for layer in model.qformer.encoder.layer:
+        layer.intermediate.load_state_dict(layer.intermediate_query.state_dict())
+        layer.output.load_state_dict(layer.output_query.state_dict())
+    print(f"warm start: loaded the trained baseline from {baseline_path} ({len(sd)} tensors)")
+
+
+def load_sgrqf(base="Salesforce/blip2-opt-2.7b", num_frames=6, trainable_path=None, bert_name=BERT, init_path=None):
     processor = Blip2Processor.from_pretrained(base)
     config = Blip2Config.from_pretrained(base)
     config.qformer_config.use_qformer_text_input = True   # builds the Q-Former's text feed-forward layers
@@ -63,6 +76,8 @@ def load_sgrqf(base="Salesforce/blip2-opt-2.7b", num_frames=6, trainable_path=No
     prepare_blip2(model, num_frames)
     add_hint_modules(model, bert_name)
     model.qformer.float()
+    if init_path and not trainable_path:
+        warm_start_from_baseline(model, init_path)
     if trainable_path:
         sd = torch.load(trainable_path, map_location="cpu")
         missing, unexpected = model.load_state_dict(sd, strict=False)

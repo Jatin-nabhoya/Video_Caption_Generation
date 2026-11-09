@@ -27,7 +27,11 @@ random.seed(cfg["seed"]); torch.manual_seed(cfg["seed"])
 dev, t0, run = "cuda", time.time(), cfg["run_name"]
 
 ckpt, state = try_resume_trainable(cfg["hf_repo"], f"{run}/last")
-processor, bert_tok, model = load_sgrqf(cfg["model_name"], cfg["num_frames"], ckpt)
+init = None
+if ckpt is None and rc.get("init_from"):            # v2: warm start from the trained BLIP-2 baseline
+    init, _ = try_resume_trainable(cfg["hf_repo"], rc["init_from"])
+    assert init, f"baseline checkpoint {rc['init_from']} not found on the HF Hub"
+processor, bert_tok, model = load_sgrqf(cfg["model_name"], cfg["num_frames"], ckpt, init_path=init)
 edges = similarity_edges(rc["hints_dir"], rc["k"])
 state = state or {"epoch": 0, "best_cider": -1.0, "history": [], "similarity_edges": edges}
 model.to(dev)

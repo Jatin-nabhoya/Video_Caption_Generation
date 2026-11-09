@@ -1,0 +1,23 @@
+# SG-RQF v2: warm start from the trained BLIP-2 baseline, then 1 epoch with hints (msrvtt). Baseline checkpoint: blip2_msrvtt_v1/best
+run_name: sgrqf_msrvtt_v2
+model_name: Salesforce/blip2-opt-2.7b
+hf_repo: jatinnabhoya/Video_Caption_Generation
+data_root: /kaggle/input/msrvtt-original/msrvtt
+num_frames: 6
+epochs: 1
+batch_size: 4
+grad_accum: 4
+eval_batch_size: 4
+repeats: 1
+max_len: 40
+lr: 1.0e-05
+weight_decay: 0.05
+warmup_ratio: 0.1
+num_beams: 3
+seed: 42
+sgrqf:
+  hints_dir: results/rag_sgrqf/msrvtt
+  k: 3
+  select: consensus
+  dropout: 0.2
+  init_from: blip2_msrvtt_v1/best
