@@ -89,6 +89,25 @@ def cut_frames(src, headers, start, end, n, d):
     return r.stderr.strip()
 
 
+BLOCKED = ("sign in to confirm", "please sign in", "429", "try again later", "rate-limit", "rate limit",
+           "too many requests", "confirm your age", "age-restricted", "inappropriate for some users")
+GONE = ("video unavailable", "this video is unavailable", "private video", "has been removed",
+        "account associated with this video has been terminated", "copyright", "no longer available",
+        "this video has been removed", "video is not available")
+
+
+def is_blocked(msg):
+    """Temporary refusals (rate limit, bot check, age gate): the video exists, retry later."""
+    low = msg.lower()
+    return "private video" not in low and any(k in low for k in BLOCKED)
+
+
+def is_gone(msg):
+    """The video itself is deleted/private. Checked AFTER is_blocked: YouTube's rate-limit message also
+    starts with 'Video unavailable ... try again later'."""
+    return not is_blocked(msg) and any(k in msg.lower() for k in GONE)
+
+
 def process(video_id, frames_dir, n, height, cookies, min_frames):
     d = os.path.join(frames_dir, video_id)
     if len(glob.glob(f"{d}/*.jpg")) >= min_frames:
@@ -106,14 +125,14 @@ def process(video_id, frames_dir, n, height, cookies, min_frames):
         except yt_dlp.utils.DownloadError as e:
             msg = str(e).replace("ERROR: ", "")[:200]
             low = msg.lower()
-            if "sign in to confirm" in low or "please sign in" in low or "429" in low:
-                time.sleep(20)                       # YouTube bot check: slow down, keep for a re-run
-                reason = "blocked by YouTube bot check: " + msg
+            if is_blocked(msg):
+                time.sleep(30)                       # YouTube rate limit / bot check: slow down, retry later
+                reason = "blocked by YouTube (rate limit): " + msg
                 continue
-            if any(k in low for k in ("unavailable", "private", "removed", "terminated", "copyright", "age")):
+            if is_gone(msg):
                 if not os.listdir(d):
                     os.rmdir(d)
-                return video_id, "missing", msg      # gone for good, no retry
+                return video_id, "missing", msg      # deleted / private for good, no retry
             reason = msg
         except Exception as e:
             reason = f"{type(e).__name__}: {str(e)[:200]}"
@@ -129,7 +148,7 @@ def main():
     p.add_argument("--num_frames", type=int, default=12)
     p.add_argument("--min_frames", type=int, default=8, help="keep a clip with at least this many frames")
     p.add_argument("--height", type=int, default=360)
-    p.add_argument("--workers", type=int, default=4)
+    p.add_argument("--workers", type=int, default=2)
     p.add_argument("--cookies_from_browser", default=None, help="chrome | firefox | safari | edge")
     p.add_argument("--cookies", default=None, help="cookies.txt exported once with yt-dlp (recommended)")
     a = p.parse_args()
@@ -138,6 +157,12 @@ def main():
     os.makedirs(frames_dir, exist_ok=True)
     status_path = f"{a.out}/status.json"
     status = json.load(open(status_path)) if os.path.exists(status_path) else {}
+    # re-check earlier "missing" verdicts with the stricter rules (older versions over-counted deletions)
+    fixed = [v for v, st in status.items() if st.get("state") == "missing" and not is_gone(st.get("reason", ""))]
+    for v in fixed:
+        status[v]["state"] = "failed"
+    if fixed:
+        print(f"{len(fixed)} clips marked 'gone' earlier were rate-limit/other errors -> will be retried")
     lock = threading.Lock()
 
     for split in a.splits:
