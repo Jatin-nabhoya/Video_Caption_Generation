@@ -1,0 +1,17 @@
+# BLIP-2 baseline on VATEX (available-clip subset): same recipe as MSVD; repeats 2 (2,460 train clips x 2 ~ MSVD 1,200 x 5)
+run_name: blip2_vatex_v1
+model_name: Salesforce/blip2-opt-2.7b
+hf_repo: jatinnabhoya/Video_Caption_Generation
+data_root: /kaggle/input/vatex-original/vatex   # set automatically by the notebook (Cell 1)
+num_frames: 6
+epochs: 3
+batch_size: 4
+grad_accum: 4
+eval_batch_size: 4
+repeats: 2
+max_len: 40
+lr: 2.0e-5
+weight_decay: 0.05
+warmup_ratio: 0.1
+num_beams: 3
+seed: 42
