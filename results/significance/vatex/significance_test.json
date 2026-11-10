@@ -1,0 +1,41 @@
+{
+  "n_videos": 2240,
+  "n_boot": 10000,
+  "seed": 0,
+  "results": [
+    {
+      "idea": "VATEX",
+      "A": "BLIP-2 (baseline)",
+      "B": "SG-RQF (ours)",
+      "metric": "CIDEr",
+      "mean_A": 72.66396529512642,
+      "mean_B": 71.71182902979183,
+      "diff": -0.9521362653345944,
+      "ci_low": -2.2386419958591612,
+      "ci_high": 0.2912213278471904,
+      "p_value": 0.1356864313568643,
+      "wins": 815,
+      "ties": 513,
+      "losses": 912,
+      "p_holm": 0.1356864313568643,
+      "significant": false
+    },
+    {
+      "idea": "VATEX",
+      "A": "BLIP-2 (baseline)",
+      "B": "SG-RQF (ours)",
+      "metric": "ROUGE-L",
+      "mean_A": 53.833148476016675,
+      "mean_B": 53.53857371188815,
+      "diff": -0.2945747641285196,
+      "ci_low": -0.6624472225120287,
+      "ci_high": 0.07682031396393603,
+      "p_value": 0.12318768123187682,
+      "wins": 762,
+      "ties": 619,
+      "losses": 859,
+      "p_holm": 0.12318768123187682,
+      "significant": false
+    }
+  ]
+}
