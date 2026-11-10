@@ -1,0 +1,77 @@
+{
+  "model": "SG-RQF (BLIP-2 OPT-2.7B + similarity-gated retrieval Q-Former)",
+  "run": "sgrqf_vatex_v1",
+  "checkpoint": "best",
+  "split": "test",
+  "n_videos": 2240,
+  "scores": {
+    "BLEU-4": 38.91,
+    "METEOR": 26.45,
+    "ROUGE-L": 53.54,
+    "CIDEr": 71.71
+  },
+  "no_hints": false,
+  "gate_quantile": 0.4,
+  "gate_similarity": 0.8474,
+  "val_gate_sweep": {
+    "0.0": {
+      "gate": null,
+      "BLEU-4": 34.32,
+      "METEOR": 26.33,
+      "ROUGE-L": 51.72,
+      "CIDEr": 72.71
+    },
+    "0.1": {
+      "gate": 0.7901900000000001,
+      "BLEU-4": 34.67,
+      "METEOR": 26.31,
+      "ROUGE-L": 51.76,
+      "CIDEr": 73.05
+    },
+    "0.2": {
+      "gate": 0.8173,
+      "BLEU-4": 34.57,
+      "METEOR": 26.21,
+      "ROUGE-L": 51.7,
+      "CIDEr": 72.75
+    },
+    "0.3": {
+      "gate": 0.834,
+      "BLEU-4": 34.65,
+      "METEOR": 26.22,
+      "ROUGE-L": 51.76,
+      "CIDEr": 73.28
+    },
+    "0.4": {
+      "gate": 0.8474,
+      "BLEU-4": 34.77,
+      "METEOR": 26.22,
+      "ROUGE-L": 51.74,
+      "CIDEr": 73.66
+    }
+  },
+  "config": {
+    "run_name": "sgrqf_vatex_v1",
+    "model_name": "Salesforce/blip2-opt-2.7b",
+    "hf_repo": "jatinnabhoya/Video_Caption_Generation",
+    "data_root": "/kaggle/input/datasets/jatinnabhoya/vatex-original/vatex_work/vatex",
+    "num_frames": 6,
+    "epochs": 3,
+    "batch_size": 4,
+    "grad_accum": 4,
+    "eval_batch_size": 4,
+    "repeats": 2,
+    "max_len": 40,
+    "lr": 2e-05,
+    "weight_decay": 0.05,
+    "warmup_ratio": 0.1,
+    "num_beams": 3,
+    "seed": 42,
+    "sgrqf": {
+      "hints_dir": "results/rag_sgrqf/vatex",
+      "k": 3,
+      "select": "consensus",
+      "dropout": 0.2
+    }
+  }
+}
